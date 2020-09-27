@@ -1,0 +1,59 @@
+{% extends "template.html" %}
+
+{% load static %}
+
+{% block nav-funds %}active{% endblock %}
+
+{% block content %}
+
+        <a href="funds/new" class="btn btn-primary">Nowa skladka</a>
+
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th scope="col">Data</th>
+          <th scope="col">Cel</th>
+          <th scope="col">Cena</th>
+          <th scope="col">Zebrane pieniadze</th>
+          <th scope="col">Liczba beneficjentow</th>
+          <th scope="col"></th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for funds in myfunds %}
+        <tr>
+            <td>{{ funds.date }}</td>
+            <td>{{ funds.purpose }}</td>
+            <td>{{ funds.purpose_price }}</td>
+            <td>{{ funds.sum_of_contribution }}</td>
+            <td>{{ funds.beneficiaries.count }}</td>
+          <td><a href="funds/{{ funds.pk }}" class="btn btn-primary">Zobacz</a>
+          <a href="funds/{{ funds.pk }}/edit" class="btn btn-primary">Edytuj</a>
+          <a href="funds/{{ funds.pk }}/delete" class="btn btn-primary">Usun</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="pagination">
+      <span class="step-links">
+        {% if myfunds.has_previous %}
+          <a href="?page=1">&laquo; first</a>
+          <a href="?page={{ myfunds.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+          Page {{ myfunds.number }} of {{ myfunds.paginator.num_pages }}.
+        </span>
+
+        {% if myfunds.has_next %}
+          <a href="?page={{ myfunds.next_page_number }}">next</a>
+          <a href="?page={{ myfunds.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+      </span>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}>
+{% endblock %}

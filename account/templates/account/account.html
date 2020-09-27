@@ -1,0 +1,60 @@
+{% extends "template.html" %}
+
+{% load static %}
+
+{% block nav-account %}active{% endblock %}
+
+{% block content %}
+
+    <div class="card w-50">
+      <h4 class="card-header">
+        {{ user_name }}: Stan konta
+      </h4>
+      <div class="card-body">
+        <p class="card-text"><h5>{{ account_value }}zl</h5></p>
+      </div>
+      </div>
+  <div class="container">
+  <h5>Dlugi do zaplacenia:</h5>
+  {% for due_user, due_amounts in dues.items %}
+    <div class="card">
+      <div class="card-header">
+        <div style="float:left;">
+          <p class="card-text" >{{ due_user }}</p>
+        </div>
+      </div>
+    {% for funds_id, due in due_amounts.items %}
+    <div class="card-body">
+      <div style="float:left;"><p class="card-text" >{{ due.1 }}zl</p></div>
+      <div style="float:right;">
+        <a href="/funds/{{ funds_id }}" class="btn btn-primary">Skladka</a>
+        <a href="#" class="btn btn-primary notify" id="notify{{ due.0 }}">Powiadom</a>
+      </div>
+    </div>
+    {% endfor %}
+    </div>
+  {% endfor %}
+  </div>
+
+  <div class="pagination">
+    <span class="step-links">
+      {% if dues_page.has_previous %}
+        <a href="?page=1">&laquo; first</a>
+        <a href="?page={{ dues_page.previous_page_number }}">previous</a>
+      {% endif %}
+
+      <span class="current">
+        Page {{ dues_page.number }} of {{ dues_page.paginator.num_pages }}.
+      </span>
+
+      {% if dues_page.has_next %}
+        <a href="?page={{ dues_page.next_page_number }}">next</a>
+        <a href="?page={{ dues_page.paginator.num_pages }}">last &raquo;</a>
+      {% endif %}
+    </span>
+  </div>
+{% endblock %}
+
+{% block scripts %}>
+    <script src="{% static 'js/notify.js' %}"></script>
+{% endblock %}

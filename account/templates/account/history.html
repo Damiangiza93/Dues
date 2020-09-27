@@ -1,0 +1,57 @@
+{% extends "template.html" %}
+
+{% load static %}
+
+{% block nav-history %}active{% endblock %}
+
+{% block content %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th scope="col">Data</th>
+          <th scope="col">Tworca</th>
+          <th scope="col">Cel</th>
+          <th scope="col">Cena</th>
+          <th scope="col">Zebrane pieniadze</th>
+          <th scope="col">Liczba beneficjentow</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for funds in history_funds %}
+        <tr>
+          <td>{{ funds.date }}</td>
+          <td>{{ funds.owner.user.username }}</td>
+          <td>{{ funds.purpose }}</td>
+          <td>{{ funds.purpose_price }}</td>
+          <td>{{ funds.sum_of_contribution }}</td>
+          <td>{{ funds.beneficiaries.count }}</td>
+          <td><a href="funds/{{ funds.pk }}" class="btn btn-primary">Zobacz</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="pagination">
+      <span class="step-links">
+        {% if history_funds.has_previous %}
+          <a href="?page=1">&laquo; first</a>
+          <a href="?page={{ history_funds.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+          Page {{ history_funds.number }} of {{ history_funds.paginator.num_pages }}.
+        </span>
+
+        {% if history_funds.has_next %}
+          <a href="?page={{ history_funds.next_page_number }}">next</a>
+          <a href="?page={{ history_funds.paginator.num_pages }}">last &raquo;</a>
+        {% endif %}
+      </span>
+    </div>
+  {% for due_user in dues %}
+  {% endfor %}
+
+{% endblock %}
+
+{% block scripts %}>
+{% endblock %}
