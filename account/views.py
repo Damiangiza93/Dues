@@ -5,8 +5,8 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 import json
-from . import models
-from . import forms as myforms
+from .models import (Account, Funds, FundsManager, Beneficiary, Due, Notification) 
+from .forms import (BeneficiaryForm, FundsForm)
 import pdb
 
 
@@ -15,7 +15,7 @@ def info_view(information):
 
 @login_required(login_url='login')
 def account(request):
-    acc = models.Account.objects.get(user=request.user.id)
+    acc = Account.objects.get(user=request.user.id)
     dues = acc.get_due_list()
 
     dues_page = []
@@ -34,53 +34,39 @@ def account(request):
         else:
             dues.update({username: {funds_id: amount}})
 
-    return render(
-        request,
-        'account/account.html',
-        {'dues': dues,
-         "dues_page": dues_page,
-         'account_value': acc.get_value(),
-         'user_name': request.user.username}
+    return render(request, 'account/account.html',{
+        'dues': dues,
+        "dues_page": dues_page,
+        'account_value': acc.get_value(),
+        'user_name': request.user.username}
     )
 
 
 @login_required(login_url='login')
 def funds(request, pk):
-    funds = get_object_or_404(models.Funds, pk=pk)
-    return render(
-        request,
-        'account/funds.html',
-        {'funds': funds}
-    )
+    funds = get_object_or_404(Funds, pk=pk)
+    return render(request, 'account/funds.html', {'funds': funds})
 
 
 @login_required(login_url='login')
 def myfunds(request):
-    acc = models.Account.objects.get(user=request.user.id)
+    acc = Account.objects.get(user=request.user.id)
     paginator = Paginator(acc.funds_set.all().order_by('-date'), 8)
     page = request.GET.get('page')
     funds = paginator.get_page(page)
-    return render(
-        request,
-        'account/myfunds.html',
-        {"myfunds": funds}
-    )
+    return render(request, 'account/myfunds.html', {"myfunds": funds})
 
 
 @login_required(login_url='login')
 def history(request):
-    acc = models.Account.objects.get(user=request.user.id)
+    acc = Account.objects.get(user=request.user.id)
     paginator = Paginator(acc.get_history_funds(), 10)
     page = request.GET.get('page')
     history_funds = paginator.get_page(page)
-    return render(
-        request,
-        'account/history.html',
-        {"history_funds": history_funds}
-    )
+    return render(request, 'account/history.html', {"history_funds": history_funds})
 
 def post_funds(request, BeneficiaryFormSet, pk):
-    form = myforms.FundsForm(request.POST)
+    form = FundsForm(request.POST)
     formset = BeneficiaryFormSet(request.POST)
     valid = False
     beneficiaries = {}
@@ -99,18 +85,15 @@ def post_funds(request, BeneficiaryFormSet, pk):
 
     if valid:
         if pk is None:
-            funds = models.Funds.objects.create(
-                owner=models.Account.objects.get(user=request.user),
+            funds = Funds.objects.create(
+                owner=Account.objects.get(user=request.user),
                 purpose=purpose,
                 purpose_price=purpose_price
             )
         else:
-            funds = models.Funds.objects.get(pk=pk)
-        funds_manager = models.FundsManager(funds)
-        funds_manager.update(
-            purpose=purpose,
-            purpose_price=purpose_price
-        )
+            funds = Funds.objects.get(pk=pk)
+        funds_manager = FundsManager(funds)
+        funds_manager.update(purpose=purpose, purpose_price=purpose_price)
         funds_manager.update_beneficiaries(beneficiaries)
         return redirect(myfunds)
 
@@ -118,15 +101,15 @@ def post_funds(request, BeneficiaryFormSet, pk):
 
 @login_required(login_url='login')
 def edit_funds(request, pk):
-    BeneficiaryFormSet = forms.formset_factory(myforms.BeneficiaryForm, extra=0)
+    BeneficiaryFormSet = forms.formset_factory(BeneficiaryForm, extra=0)
     if request.method == 'POST':
         return post_funds(request, BeneficiaryFormSet, pk)
     else:
-        funds = get_object_or_404(models.Funds, pk=pk)
-        account = models.Account.objects.get(user=request.user)
+        funds = get_object_or_404(Funds, pk=pk)
+        account = Account.objects.get(user=request.user)
         if account != funds.owner:
             return HttpResponse("Nie masz uprawnien do edytowania tej skladki")
-        form = myforms.FundsForm(initial={
+        form = FundsForm(initial={
             'purpose': funds.purpose,
             'purpose_price': funds.purpose_price
         })
@@ -147,11 +130,11 @@ def edit_funds(request, pk):
 
 @login_required(login_url='login')
 def new_funds(request):
-    BeneficiaryFormSet = forms.formset_factory(myforms.BeneficiaryForm, extra=0)
+    BeneficiaryFormSet = forms.formset_factory(BeneficiaryForm, extra=0)
     if request.method == 'POST':
         return post_funds(request, BeneficiaryFormSet, None)
     formset = BeneficiaryFormSet()
-    form = myforms.FundsForm()
+    form = FundsForm()
     return render(request, 'account/edit_funds.html', {
         'form': form,
         'formset': formset,
@@ -161,11 +144,11 @@ def new_funds(request):
 
 @login_required(login_url='login')
 def delete_funds(request, pk):
-    account = models.Account.objects.get(user=request.user)
-    funds = get_object_or_404(models.Funds, pk=pk)
+    account = Account.objects.get(user=request.user)
+    funds = get_object_or_404(Funds, pk=pk)
     if account != funds.owner:
         return redirect(myfunds)
-    funds_manager = models.FundsManager(funds)
+    funds_manager = FundsManager(funds)
     funds_manager.delete_funds()
     return redirect(myfunds)
 
@@ -188,7 +171,7 @@ def new_notify(request):
         "message": "Nie ma nowej notyfikacji"
     }
     if request.method == "GET":
-        acc = models.Account.objects.get(user=request.user.id)
+        acc = Account.objects.get(user=request.user.id)
         new_notifications = acc.notifications_received.filter(seen=False)
         if new_notifications.exists():
             response["new_notifications"] = new_notifications.count()
@@ -202,8 +185,8 @@ def send_notification(request):
             if u'due_type' in request.GET:
                 due_type = int(request.GET[u'due_type'])
                 due_id = request.GET[u'due_id']
-                acc = models.Account.objects.get(user=request.user)
-                due = models.Due.objects.get(pk=int(due_id))
+                acc = Account.objects.get(user=request.user)
+                due = Due.objects.get(pk=int(due_id))
                 if due_type == 0:
                     sent = acc.send_notification(due)
                 elif due_type == 1:
@@ -218,14 +201,14 @@ def notify(request):
     response = {
         "success": False,
         "message": "Nie udalo sie stworzyc notyfikacji"
-    }
+        }
     if request.method == "GET":
         if u'due_id' in request.GET:
             if u'due_type' in request.GET:
                 due_type = int(request.GET[u'due_type'])
                 due_id = request.GET[u'due_id']
-                acc = models.Account.objects.get(user=request.user)
-                due = models.Due.objects.get(pk=int(due_id))
+                acc = Account.objects.get(user=request.user)
+                due = Due.objects.get(pk=int(due_id))
                 sent = acc.send_notification(due)
                 if sent is not None:
                     response["success"] = True
@@ -239,8 +222,8 @@ def notify_back(request):
             if u'answer' in request.GET:
                 noti_id = int(request.GET[u'noti_id'])
                 answer = int(request.GET[u'answer'])
-                acc = models.Account.objects.get(user=request.user)
-                noti = models.Notification.objects.get(pk=int(noti_id))
+                acc = Account.objects.get(user=request.user)
+                noti = Notification.objects.get(pk=int(noti_id))
                 noti.answered = True
                 noti.save()
                 due = noti.due
@@ -254,20 +237,14 @@ def notify_back(request):
 
 @login_required(login_url='login')
 def notifications(request):
-    acc = models.Account.objects.get(user=request.user.id)
-    paginator = Paginator(
-        acc.notifications_received.filter(answered=False).order_by("-seen","-latest_date", "-latest_datetime"),
-        10
-    )
+    acc = Account.objects.get(user=request.user.id)
+    paginator = Paginator(acc.notifications_received.filter(answered=False).order_by("-seen","-latest_date", "-latest_datetime"), 10)
     page = request.GET.get('page')
     notifications_received = paginator.get_page(page)
     for notification in acc.notifications_received.filter(seen=False):
         notification.seen = True
         notification.save()
-    return render(
-        request,
-        'account/notification.html',
-        {"notifications": notifications_received,
-         "notification_types": dict(models.Notification.Type.__members__)}
-    )
+    return render(request, 'account/notification.html',{
+        "notifications": notifications_received,
+        "notification_types": dict(Notification.Types.__members__)})
     pass

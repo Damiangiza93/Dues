@@ -307,13 +307,13 @@ class NotificationTestCaseManager:
     def validate_notifications(self, expected_notifications):
         self.assert_equal(Notification.objects.all().count(), len(expected_notifications))
         for notification_tuple in expected_notifications:
-            type = notification_tuple[0]
+            types = notification_tuple[0]
             from_account = get_account(notification_tuple[1])
             to_account = get_account(notification_tuple[2])
             seen = notification_tuple[3]
-            self.validate_notification(type, from_account, to_account, seen)
+            self.validate_notification(types, from_account, to_account, seen)
 
-    def validate_notification(self, type, from_account, to_account, seen):
+    def validate_notification(self, types, from_account, to_account, seen):
         notification_queryset = Notification.objects.filter(
             from_account=from_account,
             to_account=to_account,
@@ -322,7 +322,7 @@ class NotificationTestCaseManager:
         self.assert_equal(notification_queryset.exists(), True)
         self.assert_equal(notification_queryset.count(), 1)
         notification = notification_queryset.first()
-        self.assert_equal(notification.type, int(type))
+        self.assert_equal(notification.types, int(types))
         self.assert_equal(notification.seen, seen)
 
 class NotificationTestCase(TestCase):
@@ -332,14 +332,14 @@ class NotificationTestCase(TestCase):
     def test_1_notify(self):
         self.manager.notify(1)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False)
+            (Notification.Types.PAID, 1, 2, False)
         ])
         pass
 
     def test_2_notify(self):
         self.manager.notify(2)
         self.manager.validate_notifications([
-            (Notification.Type.UNPAID, 2, 1, False)
+            (Notification.Types.UNPAID, 2, 1, False)
         ])
         pass
 
@@ -347,7 +347,7 @@ class NotificationTestCase(TestCase):
         self.manager.notify(1)
         self.manager.notify(1)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False)
+            (Notification.Types.PAID, 1, 2, False)
         ])
         pass
 
@@ -355,7 +355,7 @@ class NotificationTestCase(TestCase):
         self.manager.notify(2)
         self.manager.notify(2)
         self.manager.validate_notifications([
-            (Notification.Type.UNPAID, 2, 1, False)
+            (Notification.Types.UNPAID, 2, 1, False)
         ])
         pass
 
@@ -363,8 +363,8 @@ class NotificationTestCase(TestCase):
         self.manager.notify(1)
         self.manager.notify_back((1, 2), True)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False),
-            (Notification.Type.ACCEPTED, 2, 1, False)
+            (Notification.Types.PAID, 1, 2, False),
+            (Notification.Types.ACCEPTED, 2, 1, False)
         ])
         pass
 
@@ -372,8 +372,8 @@ class NotificationTestCase(TestCase):
         self.manager.notify(1)
         self.manager.notify_back((1, 2), False)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False),
-            (Notification.Type.DECLINED, 2, 1, False)
+            (Notification.Types.PAID, 1, 2, False),
+            (Notification.Types.DECLINED, 2, 1, False)
         ])
         pass
 
@@ -382,8 +382,8 @@ class NotificationTestCase(TestCase):
         self.manager.notify_back((1, 2), True)
         self.manager.notify_back((1, 2), True)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False),
-            (Notification.Type.ACCEPTED, 2, 1, False)
+            (Notification.Types.PAID, 1, 2, False),
+            (Notification.Types.ACCEPTED, 2, 1, False)
         ])
         pass
 
@@ -392,8 +392,8 @@ class NotificationTestCase(TestCase):
         self.manager.notify_back((1, 2), True)
         self.manager.notify(1)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False),
-            (Notification.Type.ACCEPTED, 2, 1, False)
+            (Notification.Types.PAID, 1, 2, False),
+            (Notification.Types.ACCEPTED, 2, 1, False)
         ])
         pass
 
@@ -402,8 +402,8 @@ class NotificationTestCase(TestCase):
         self.manager.notify_back((1, 2), False)
         self.manager.notify(1)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False),
-            (Notification.Type.DECLINED, 2, 1, False)
+            (Notification.Types.PAID, 1, 2, False),
+            (Notification.Types.DECLINED, 2, 1, False)
         ])
         pass
 
@@ -413,7 +413,7 @@ class NotificationTestCase(TestCase):
         self.manager.notify(1)
         self.manager.notify_back((1, 2), True)
         self.manager.validate_notifications([
-            (Notification.Type.PAID, 1, 2, False),
-            (Notification.Type.ACCEPTED, 2, 1, False)
+            (Notification.Types.PAID, 1, 2, False),
+            (Notification.Types.ACCEPTED, 2, 1, False)
         ])
         pass

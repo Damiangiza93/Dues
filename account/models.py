@@ -11,10 +11,10 @@ import pdb
 
 
 class Account(models.Model):
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
-    )
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.user.username
 
     def get_value(self):
         dues = self.get_due_list()
@@ -119,17 +119,13 @@ class FundsManager:
 class Funds(models.Model):
     owner = models.ForeignKey(Account, on_delete=models.CASCADE)
     purpose = models.CharField(max_length=130)
-    purpose_price = models.DecimalField(
-        decimal_places=2,
-        max_digits=15
-    )
-    sum_of_contribution = models.DecimalField(
-        decimal_places=2,
-        max_digits=15,
-        default=0
-    )
+    purpose_price = models.DecimalField(decimal_places=2, max_digits=15)
+    sum_of_contribution = models.DecimalField(decimal_places=2, max_digits=15, default=0)
     date = models.DateField(default=date.today)
     datetime = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f'{self.owner} - {self.purpose} - {self.purpose_price}'
 
     def update_beneficiary(self, account, contribution):
         if self.beneficiaries.filter(account=account).exists():
@@ -139,10 +135,7 @@ class Funds(models.Model):
 
     def add_beneficiary(self, account, contribution):
         self.sum_of_contribution += Decimal(contribution)
-        self.beneficiaries.create(
-            account=account,
-            contribution=contribution
-        )
+        self.beneficiaries.create(account=account, contribution=contribution)
         self.save()
 
     def delete_beneficiary(self, account):
@@ -186,11 +179,7 @@ class Funds(models.Model):
                     filter(account=debtor.account).\
                     filter(for_account=creditor.account)
                 if not due:
-                    created_due = self.dues.create(
-                        account=debtor.account,
-                        for_account=creditor.account,
-                        amount=amount
-                    )
+                    created_due = self.dues.create(account=debtor.account, for_account=creditor.account, amount=amount)
                 else:
                     due = due.first()
                     due.amount = amount
@@ -200,21 +189,9 @@ class Funds(models.Model):
 
 
 class Beneficiary(models.Model):
-    account = models.ForeignKey(
-        Account,
-        on_delete=models.CASCADE,
-        related_name="as_beneficiaries"
-    )
-    funds = models.ForeignKey(
-        Funds,
-        on_delete=models.CASCADE,
-        related_name="beneficiaries"
-    )
-    contribution = models.DecimalField(
-        decimal_places=2,
-        max_digits=15,
-        default=0
-    )
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="as_beneficiaries")
+    funds = models.ForeignKey(Funds, on_delete=models.CASCADE, related_name="beneficiaries")
+    contribution = models.DecimalField(decimal_places=2, max_digits=15, default=0)
 
     def get_info(self):
         return {
@@ -224,42 +201,26 @@ class Beneficiary(models.Model):
         }
 
     def __str__(self):
-        return '(%s:%s$%s)' % (self.account.pk, self.funds.pk, self.contribution)
+        return f'{self.account.user.username} payed {self.contribution} for {self.funds.purpose}'
 
 
 class Due(models.Model):
-    funds = models.ForeignKey(
-        Funds,
-        on_delete=models.CASCADE,
-        related_name="dues"
-    )
-    account = models.ForeignKey(
-        Account,
-        on_delete=models.CASCADE,
-        related_name="dues"
-    )
-    for_account = models.ForeignKey(
-        Account,
-        on_delete=models.CASCADE,
-        related_name="dues_from"
-    )
-    amount = models.DecimalField(
-        decimal_places=2,
-        max_digits=15,
-        default=0
-    )
+    funds = models.ForeignKey(Funds, on_delete=models.CASCADE, related_name="dues")
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="dues")
+    for_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="dues_from")
+    amount = models.DecimalField(decimal_places=2, max_digits=15, default=0)
     is_paid = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f'from {self.account.user.username} to {self.for_account} - {self.amount}'
 
     def get_notification(self):
-        notification = self.notification_set.filter(
-            from_account=self.account,
-            to_account=self.for_account
-        )
+        notification = self.notification_set.filter(from_account=self.account, to_account=self.for_account)
         if notification.exists():
             notification = notification.first()
         else:
             notification = self.notification_set.create(
-                type=Notification.Type.PAID,
+                types=Notification.Types.PAID,
                 from_account=self.account,
                 to_account=self.for_account,
                 message=""
@@ -267,16 +228,14 @@ class Due(models.Model):
         return notification
 
     def get_notification_back(self):
-        notification = self.notification_set.filter(
-            from_account=self.for_account,
-            to_account=self.account
-        )
+        notification = self.notification_set.filter(from_account=self.for_account, to_account=self.account)
+
         if notification.exists():
             notification = notification.first()
-            notification.type = type
+            notification.types = types
         else:
             notification = self.notification_set.create(
-                type=Notification.Type.UNPAID,
+                types=Notification.Types.UNPAID,
                 from_account=self.for_account,
                 to_account=self.account,
                 message=""
@@ -285,29 +244,29 @@ class Due(models.Model):
 
     def send_paid(self, message):
         notification = self.get_notification()
-        notification.send(message, Notification.Type.PAID)
+        notification.send(message, Notification.Types.PAID)
         return notification
 
     def send_unpaid(self, message):
         notification = self.get_notification_back()
-        notification.send(message, Notification.Type.UNPAID)
+        notification.send(message, Notification.Types.UNPAID)
         return notification
 
     def send_accept(self, message):
         notification = self.get_notification_back()
-        notification.send(message, Notification.Type.ACCEPTED)
+        notification.send(message, Notification.Types.ACCEPTED)
         self.is_paid = True
         self.save()
         return notification
 
     def send_decline(self, message):
         notification = self.get_notification_back()
-        notification.send(message, Notification.Type.DECLINED)
+        notification.send(message, Notification.Types.DECLINED)
         return notification
 
 
 class Notification(models.Model):
-    class Type(Enum):
+    class Types(Enum):
         PAID = 0
         UNPAID = 1
         ACCEPTED = 2
@@ -320,21 +279,10 @@ class Notification(models.Model):
         def __int__(self):
             return self.value
 
-    type = models.IntegerField(choices=Type.choices())
-    from_account = models.ForeignKey(
-        Account,
-        on_delete=models.CASCADE,
-        related_name="notifications_sent"
-    )
-    to_account = models.ForeignKey(
-        Account,
-        on_delete=models.CASCADE,
-        related_name="notifications_received"
-    )
-    due = models.ForeignKey(
-        Due,
-        on_delete=models.CASCADE
-    )
+    types = models.IntegerField(choices=Types.choices())
+    from_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="notifications_sent")
+    to_account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name="notifications_received")
+    due = models.ForeignKey(Due, on_delete=models.CASCADE)
     latest_date = models.DateField(default=date.today)
     latest_datetime = models.DateTimeField(default=timezone.now)
     date = models.DateField(default=date.today)
@@ -343,14 +291,14 @@ class Notification(models.Model):
     seen = models.BooleanField(default=False)
     answered = models.BooleanField(default=False)
 
-    def send(self, message, type):
+    def send(self, message, types):
         self.latest_date = date.today()
         self.latest_datetime = timezone.now()
         self.message = message
-        self.type = type
+        self.types = types
         self.seen = False
         self.answered = False
         self.save()
 
     def __str__(self):
-        return '(%s%s:%s->%s)' % (self.due, self.Type(self.type).name, self.from_account.pk, self.to_account.pk)
+        return '(%s%s:%s->%s)' % (self.due, self.Types(self.types).name, self.from_account.pk, self.to_account.pk)

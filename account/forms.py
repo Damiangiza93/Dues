@@ -1,5 +1,5 @@
 from django import forms
-from . import models
+from .models import (Account, Funds, FundsManager, Beneficiary, Due, Notification)
 
 class BeneficiaryForm(forms.Form):
     account_id = forms.CharField(max_length=130)
